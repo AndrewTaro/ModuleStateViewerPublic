@@ -1,0 +1,141 @@
+(def element ModuleStateViewer () layout=true
+	(scope
+		#camera and data component
+		(var cameraEntity:gfx = "$datahub.getSingleEntity(CC.camera)")
+		(var dataComponent:gfx = "cameraEntity.dataComponent" (event "cameraEntity.evAdded") (event "cameraEntity.evRemoved"))
+		(var entityIds:array = "dataComponent ? dataComponent.data : {}" (event "dataComponent.evDataChanged"))
+		#(var altVision:bool = "cameraEntity.camera.altVision" (event "cameraEntity.camera.evAltVisionChanged"))
+	)
+
+	(block
+		#(bind visible "altVision")
+		(controller $Repeat renderer='ModuleViewer'
+			(bind count "entityIds ? entityIds.length : 0" (event "dataComponent.evChanged"))
+			(args "entityIds[$index]")
+		)
+	)
+)
+
+(def element ModuleViewer(_entityId:number) layout=true
+	(scope
+		(event evPositionUpdate)
+		(var entity:gfx = "$datahub.getEntity(_entityId)")
+		(var dataComponent:gfx = "entity.data" (event "entity.evAdded") (event "entity.evRemoved"))
+		(var data:dict = "dataComponent ? dataComponent.data : {}" (event "dataComponent.evChanged"))
+		#marker pos
+		(var cameraEntity:gfx = "$datahub.getSingleEntity(CC.camera)")
+		(var altVision:bool = "cameraEntity.camera.altVision" (event "cameraEntity.camera.evAltVisionChanged"))
+		(var screenPosition:gfx = "entity ? entity.screenPosition : null" (event "entity.evAdded") (event "entity.evRemoved"))
+		(var posX:number = "screenPosition ? screenPosition.position.x : 0" (event "evPositionUpdate"))
+		(var posY:number = "screenPosition ? screenPosition.position.y : 0" (event "evPositionUpdate"))
+		#data
+		(var state:number = "data.state")
+		(var isInCritcal:bool = "isIn(state, [2, 3, 10])")
+	)
+
+	(dispatch evPositionUpdate args={} (event "evEnterFrame") (bind enabled "altVision || isInCritcal"))
+
+	(style
+		(bind left "posX")
+		(bind top "posY")
+		(position = "absolute")
+		(align = "center|bottom")
+	)
+
+	(element ModuleItem "_entityId")
+)
+
+(def element ModuleItem(_entityId:number) layout=true
+	(scope
+		#entity
+		(var entity:gfx = "$datahub.getEntity(_entityId)")
+		(var dataComponent:gfx = "entity.data" (event "entity.evAdded") (event "entity.evRemoved"))
+		(var distanceComponent:gfx = "entity.distance" (event "entity.evAdded") (event "entity.evRemoved"))
+		(var moduleData:dict = "dataComponent ? dataComponent.data : {}" (event "dataComponent.evChanged"))
+		#timer
+		(var timerEntity:gfx = "$datahub.getSingleEntity(CC.timer)")
+		#camera
+		(var cameraEntity:gfx = "$datahub.getSingleEntity(CC.camera)")
+		(var altVision:bool = "cameraEntity.camera.altVision" (event "cameraEntity.camera.evAltVisionChanged"))
+		#vars
+		(var type:str = "moduleData.type")
+		(var state:number = "moduleData.state")
+		(var critTimerEnabled:bool = "isIn(state, [2, 10])")
+		(var critTimer:number = "moduleData.critTimer - timerEntity.timer.currentTime" (bind enabled "critTimerEnabled") (event "timerEntity.timer.evFrequent"))
+		(var critTimerStr:str = "critTimerEnabled ? countdownFormat(critTimer) : ' '")
+		(var currentHP:number = "formatFloatingPoint(moduleData.currentHP, 0)")
+		(var maxHP:number = "formatFloatingPoint(moduleData.maxHP, 0)")
+		(var distanceIndex:number = "distanceComponent.distanceIndex" (event "distanceComponent.evDistanceIndexChanged"))
+		(var closeToCamera:bool = "distanceIndex == DistanceType.NEAR")
+		#0: Normal, 1: Damaged, 2: Critical, 3: Destroyed, 4: Detonated, 10: Idle
+		#reload: yellow, crit: red, normal: green, destroyed: black
+		(var stateColor:number = "  state == 0? SC.Ui_styles.SERVICE_COLORS.WHITE:
+									state == 1? SC.Ui_styles.SERVICE_COLORS.GREEN:
+									critTimerEnabled? 0xFFFF3300:
+									state == 3? 0xFF646464:
+									SC.Ui_styles.SERVICE_COLORS.ORANGE"
+		)
+		(var textItemVisibility:bool = "closeToCamera && altVision")
+		(var imageItemVisibility:bool = "closeToCamera ? (altVision || critTimerEnabled) : (critTimerEnabled || state == 3)")
+		(var bigIcon:bool = "(closeToCamera || altVision) ? true : false")
+		#(var health:str = "toString(currentHP) + '/' + toString(maxHP)")
+		#(var iconPath:str = "isInstalled ? modernization.iconPath : 'url:../consumables/ammo_ap.png'")
+	)
+
+	(block
+		(style
+			(width = 0) (height = 0)
+			(align = "center|bottom")
+		)
+
+		(element ModuleViewerImageItem "type" "state" "bigIcon" "imageItemVisibility")
+		#(element ModuleViewerTextItem "currentHP" "stateColor" "textItemVisibility")
+		#(element ModuleViewerTextItem "critTimerStr" "stateColor" "textItemVisibility")
+		(controller $Instance
+			(bind renderer "'ModuleViewerTextItem'")
+			(args "currentHP" "stateColor" "textItemVisibility")
+			(bind enabled "closeToCamera")
+		)
+		(controller $Instance
+			(bind renderer "'ModuleViewerTextItem'")
+			(args "critTimerStr" "stateColor" "textItemVisibility")
+			(bind enabled "closeToCamera")
+		)
+	)
+)
+
+(def element ModuleViewerTextItem (_value:str, _color:number, _visible:bool) layout=true
+	(class $WorldMarkerItemMargins)
+	(tf
+		(class $WorldMarkerTextItem)
+		(style
+			(bind noTranslate "false")
+			(bind textColor "_color")
+		)
+		(bind visible "_visible")
+		(bind text "_value")
+	)
+)
+
+(def element ModuleViewerImageItem (_type:number, _state:number, _bigIcon:bool, _visible:bool) layout=true
+	(scope
+		(var type:str = "_type == 1 ? 'main_caliber' : 'torpedo_tube'")
+		(var state:str = "isIn(_state, [2, 10]) ? 'crit' : 'dead'")
+		(var iconPath:str = "	_bigIcon ? 'url:../battle_hud/indicators/modules/' + type + '_' + state + '.png'
+										 : 'url:../battle_hud/markers/torpedoes/icon_torpedo_not_dangerous_enemy.png'")
+		(var colorOffset:number = "_state == 0 ? 255 : 0")
+		(var scale:number = "_bigIcon ? 0.4 : 1.0")
+		(var size:number = "_bigIcon ? 60 : 5")
+	)
+	(block
+		(style
+			(bind backgroundImage "iconPath")
+			(bind scaleX "scale")
+			(bind scaleY "scale")
+			(bind width "size")
+			(bind height "size")
+		)
+		(bind visible "_visible")
+		(bind colorTransform "{redOffset: colorOffset, greenOffset: colorOffset, blueOffset: colorOffset}")
+	)
+)

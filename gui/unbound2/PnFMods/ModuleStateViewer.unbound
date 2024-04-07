@@ -61,7 +61,7 @@
 		(var type:str = "moduleData.type")
 		(var state:number = "moduleData.state")
 		(var critTimerEnabled:bool = "isIn(state, [2, 10])")
-		(var critTimer:number = "moduleData.critTimer - timerEntity.timer.currentTime" (bind enabled "critTimerEnabled") (event "timerEntity.timer.evFrequent"))
+		(var critTimer:number = "moduleData.critTimer - timerEntity.timer.currentTime" (event "timerEntity.timer.evFrequent"))
 		(var critTimerStr:str = "critTimerEnabled ? countdownFormat(critTimer) : ' '")
 		(var currentHP:number = "formatFloatingPoint(moduleData.currentHP, 0)")
 		(var maxHP:number = "formatFloatingPoint(moduleData.maxHP, 0)")

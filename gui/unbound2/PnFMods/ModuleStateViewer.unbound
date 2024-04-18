@@ -3,7 +3,7 @@
 		#camera and data component
 		(var cameraEntity:gfx = "$datahub.getSingleEntity(CC.camera)")
 		(var dataComponent:gfx = "cameraEntity.dataComponent" (event "cameraEntity.evAdded") (event "cameraEntity.evRemoved"))
-		(var entityIds:array = "dataComponent ? dataComponent.data : {}" (event "dataComponent.evDataChanged"))
+		(var entityIds:array = "dataComponent ? dataComponent.data : []" (event "dataComponent.evDataChanged"))
 		#(var altVision:bool = "cameraEntity.camera.altVision" (event "cameraEntity.camera.evAltVisionChanged"))
 	)
 

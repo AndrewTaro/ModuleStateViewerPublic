@@ -19,21 +19,26 @@
 (def element ModuleViewer(_entityId:number) layout=true
 	(scope
 		(event evPositionUpdate)
-		(var entity:gfx = "$datahub.getEntity(_entityId)")
-		(var dataComponent:gfx = "entity.data" (event "entity.evAdded") (event "entity.evRemoved"))
-		(var data:dict = "dataComponent ? dataComponent.data : {}" (event "dataComponent.evChanged"))
-		#marker pos
-		(var cameraEntity:gfx = "$datahub.getSingleEntity(CC.camera)")
-		(var altVision:bool = "cameraEntity.camera.altVision" (event "cameraEntity.camera.evAltVisionChanged"))
-		(var screenPosition:gfx = "entity ? entity.screenPosition : null" (event "entity.evAdded") (event "entity.evRemoved"))
-		(var posX:number = "screenPosition ? screenPosition.position.x : 0" (event "evPositionUpdate"))
-		(var posY:number = "screenPosition ? screenPosition.position.y : 0" (event "evPositionUpdate"))
-		#data
-		(var state:number = "data.state")
+		(var _markerEntity:gfx = "$datahub.getEntity(_entityId)")
+
+		# data
+		(macro GET_MARKER_ENTITY_COMPONENT 'data')
+		(var data:dict = "dataComponent ? dataComponent.data : null" (event "dataComponent.evChanged"))
+		(var state:number = "data ? data.state : -1")
 		(var isInCritcal:bool = "isIn(state, [2, 3, 10])")
+
+		# marker pos
+		(var camera:gfx = "$datahub.getSingleComponent(CC.camera)")
+		(var altVision:bool = "camera.altVision" (event "camera.evAltVisionChanged"))
+
+		(var isVisible:bool = "_markerEntity && (altVision || isInCritcal)")
+
+		(macro GET_MARKER_ENTITY_COMPONENT 'screenPosition')
+		(var posX:number = "screenPositionComponent ? screenPositionComponent.position.x : 0" (event "evPositionUpdate"))
+		(var posY:number = "screenPositionComponent ? screenPositionComponent.position.y : 0" (event "evPositionUpdate"))
 	)
 
-	(dispatch evPositionUpdate args={} (event "evEnterFrame") (bind enabled "altVision || isInCritcal"))
+	(dispatch evPositionUpdate args={} (bind enabled "isVisible") (event "evEnterFrame"))
 
 	(style
 		(bind left "posX")
@@ -48,24 +53,37 @@
 (def element ModuleItem(_entityId:number) layout=true
 	(scope
 		#entity
-		(var entity:gfx = "$datahub.getEntity(_entityId)")
-		(var dataComponent:gfx = "entity.data" (event "entity.evAdded") (event "entity.evRemoved"))
-		(var distanceComponent:gfx = "entity.distance" (event "entity.evAdded") (event "entity.evRemoved"))
-		(var moduleData:dict = "dataComponent ? dataComponent.data : {}" (event "dataComponent.evChanged"))
+		(var _markerEntity:gfx = "$datahub.getEntity(_entityId)")
+
+		(macro GET_MARKER_ENTITY_COMPONENT 'data')
+		(macro GET_MARKER_ENTITY_COMPONENT 'distance')
+
+		(var moduleData:dict = "dataComponent ? dataComponent.data : null" (event "dataComponent.evChanged"))
 		#timer
-		(var timerEntity:gfx = "$datahub.getSingleEntity(CC.timer)")
+		(var timer:gfx = "$datahub.getSingleComponent(CC.timer)")
+
 		#camera
-		(var cameraEntity:gfx = "$datahub.getSingleEntity(CC.camera)")
-		(var altVision:bool = "cameraEntity.camera.altVision" (event "cameraEntity.camera.evAltVisionChanged"))
-		#vars
-		(var type:str = "moduleData.type")
-		(var state:number = "moduleData.state")
+		(var camera:gfx = "$datahub.getSingleComponent(CC.camera)")
+		(var altVision:bool = "camera.altVision" (event "camera.evAltVisionChanged"))
+
+		# vars
+		(var type:number = "moduleData ? moduleData.type : -1")
+		(var state:number = "moduleData ? moduleData.state : -1")
+		(var critTimer:number = "moduleData ? moduleData.critTimer : 0")
+		(var currentHPRaw:number = "moduleData ? moduleData.currentHP : -1")
+		(var maxHPRaw:number = "moduleData ? moduleData.maxHP : -1")
+
+		# crit
 		(var critTimerEnabled:bool = "isIn(state, [2, 10])")
-		(var critTimer:number = "moduleData.critTimer - timerEntity.timer.currentTime" (event "timerEntity.timer.evFrequent"))
-		(var critTimerStr:str = "critTimerEnabled ? countdownFormat(critTimer) : ' '")
-		(var currentHP:number = "formatFloatingPoint(moduleData.currentHP, 0)")
-		(var maxHP:number = "formatFloatingPoint(moduleData.maxHP, 0)")
-		(var distanceIndex:number = "distanceComponent.distanceIndex" (event "distanceComponent.evDistanceIndexChanged"))
+		(var critTimeLeft:number = "critTimer - timer.currentTime" (event "timer.evFrequent"))
+		(var critTimeLeftStr:str = "critTimerEnabled ? countdownFormat(critTimeLeft) : ' '")
+
+		# hp
+		(var currentHP:number = "formatFloatingPoint(currentHPRaw, 0)")
+		(var maxHP:number = "formatFloatingPoint(maxHPRaw, 0)")
+
+		# dist
+		(var distanceIndex:number = "distanceComponent ? distanceComponent.distanceIndex : -1" (event "distanceComponent.evDistanceIndexChanged"))
 		(var closeToCamera:bool = "distanceIndex == DistanceType.NEAR")
 		#0: Normal, 1: Damaged, 2: Critical, 3: Destroyed, 4: Detonated, 10: Idle
 		#reload: yellow, crit: red, normal: green, destroyed: black
@@ -98,7 +116,7 @@
 		)
 		(controller $Instance
 			(bind renderer "'ModuleViewerTextItem'")
-			(args "critTimerStr" "stateColor" "textItemVisibility")
+			(args "critTimeLeftStr" "stateColor" "textItemVisibility")
 			(bind enabled "closeToCamera")
 		)
 	)

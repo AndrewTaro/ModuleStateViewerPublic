@@ -9,14 +9,14 @@
 
 	(block
 		#(bind visible "altVision")
-		(controller $Repeat renderer='ModuleViewer'
+		(controller $Repeat renderer='MSV_ModuleViewer'
 			(bind count "entityIds ? entityIds.length : 0" (event "dataComponent.evChanged"))
 			(args "entityIds[$index]")
 		)
 	)
 )
 
-(def element ModuleViewer(_entityId:number) layout=true
+(def element MSV_ModuleViewer(_entityId:number) layout=true
 	(scope
 		(event evPositionUpdate)
 		(var _markerEntity:gfx = "$datahub.getEntity(_entityId)")
@@ -47,10 +47,10 @@
 		(align = "center|bottom")
 	)
 
-	(element ModuleItem "_entityId")
+	(element MSV_ModuleItem "_entityId")
 )
 
-(def element ModuleItem(_entityId:number) layout=true
+(def element MSV_ModuleItem(_entityId:number) layout=true
 	(scope
 		#entity
 		(var _markerEntity:gfx = "$datahub.getEntity(_entityId)")
@@ -106,23 +106,23 @@
 			(align = "center|bottom")
 		)
 
-		(element ModuleViewerImageItem "type" "state" "bigIcon" "imageItemVisibility")
-		#(element ModuleViewerTextItem "currentHP" "stateColor" "textItemVisibility")
-		#(element ModuleViewerTextItem "critTimerStr" "stateColor" "textItemVisibility")
+		(element MSV_ModuleViewerImageItem "type" "state" "bigIcon" "imageItemVisibility")
+		#(element MSV_ModuleViewerTextItem "currentHP" "stateColor" "textItemVisibility")
+		#(element MSV_ModuleViewerTextItem "critTimerStr" "stateColor" "textItemVisibility")
 		(controller $Instance
-			(bind renderer "'ModuleViewerTextItem'")
+			(bind renderer "'MSV_ModuleViewerTextItem'")
 			(args "currentHP" "stateColor" "textItemVisibility")
 			(bind enabled "closeToCamera")
 		)
 		(controller $Instance
-			(bind renderer "'ModuleViewerTextItem'")
+			(bind renderer "'MSV_ModuleViewerTextItem'")
 			(args "critTimeLeftStr" "stateColor" "textItemVisibility")
 			(bind enabled "closeToCamera")
 		)
 	)
 )
 
-(def element ModuleViewerTextItem (_value:str, _color:number, _visible:bool) layout=true
+(def element MSV_ModuleViewerTextItem (_value:str, _color:number, _visible:bool) layout=true
 	(class $WorldMarkerItemMargins)
 	(tf
 		(class $WorldMarkerTextItem)
@@ -135,7 +135,7 @@
 	)
 )
 
-(def element ModuleViewerImageItem (_type:number, _state:number, _bigIcon:bool, _visible:bool) layout=true
+(def element MSV_ModuleViewerImageItem (_type:number, _state:number, _bigIcon:bool, _visible:bool) layout=true
 	(scope
 		(var type:str = "_type == 1 ? 'main_caliber' : 'torpedo_tube'")
 		(var state:str = "isIn(_state, [2, 10]) ? 'crit' : 'dead'")
